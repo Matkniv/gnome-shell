@@ -1,7 +1,7 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 /* exported ExtensionState, ExtensionType, getCurrentExtension,
-   getSettings, initTranslations, openPrefs, isOutOfDate,
-   installImporter, serializeExtension, deserializeExtension */
+   getSettings, initTranslations, isOutOfDate, installImporter,
+   serializeExtension, deserializeExtension */
 
 // Common utils for the extension system and the extension
 // preferences tool
@@ -15,7 +15,7 @@ const Config = imports.misc.config;
 
 var ExtensionType = {
     SYSTEM: 1,
-    PER_USER: 2,
+    PER_USER: 2
 };
 
 var ExtensionState = {
@@ -28,27 +28,18 @@ var ExtensionState = {
 
     // Used as an error state for operations on unknown extensions,
     // should never be in a real extensionMeta object.
-    UNINSTALLED: 99,
+    UNINSTALLED: 99
 };
 
-const SERIALIZED_PROPERTIES = [
-    'type',
-    'state',
-    'path',
-    'error',
-    'hasPrefs',
-    'hasUpdate',
-    'canChange',
-];
+const SERIALIZED_PROPERTIES = ['type', 'state', 'path', 'error', 'hasPrefs', 'canChange', 'isRequested'];
 
 /**
  * getCurrentExtension:
  *
- * @returns {?object} - The current extension, or null if not called from
- * an extension.
+ * Returns the current extension, or null if not called from an extension.
  */
 function getCurrentExtension() {
-    let stack = new Error().stack.split('\n');
+    let stack = (new Error()).stack.split('\n');
     let extensionStackLine;
 
     // Search for an occurrence of an extension stack frame
@@ -93,7 +84,7 @@ function getCurrentExtension() {
 
 /**
  * initTranslations:
- * @param {string=} domain - the gettext domain to use
+ * @domain: (optional): the gettext domain to use
  *
  * Initialize Gettext to load translations from extensionsdir/locale.
  * If @domain is not provided, it will be taken from metadata['gettext-domain']
@@ -117,8 +108,7 @@ function initTranslations(domain) {
 
 /**
  * getSettings:
- * @param {string=} schema - the GSettings schema id
- * @returns {Gio.Settings} - a new settings object for @schema
+ * @schema: (optional): the GSettings schema id
  *
  * Builds and returns a GSettings schema for @schema, using schema files
  * in extensionsdir/schemas. If @schema is omitted, it is taken from
@@ -138,13 +128,12 @@ function getSettings(schema) {
     // SYSTEM extension that has been installed in the same prefix as the shell
     let schemaDir = extension.dir.get_child('schemas');
     let schemaSource;
-    if (schemaDir.query_exists(null)) {
+    if (schemaDir.query_exists(null))
         schemaSource = GioSSS.new_from_directory(schemaDir.get_path(),
                                                  GioSSS.get_default(),
                                                  false);
-    } else {
+    else
         schemaSource = GioSSS.get_default();
-    }
 
     let schemaObj = schemaSource.lookup(schema, true);
     if (!schemaObj)
@@ -154,31 +143,9 @@ function getSettings(schema) {
 }
 
 /**
- * openPrefs:
- *
- * Open the preference dialog of the current extension
- */
-function openPrefs() {
-    const extension = getCurrentExtension();
-
-    if (!extension)
-        throw new Error('openPrefs() can only be called from extensions');
-
-    try {
-        const extensionManager = imports.ui.main.extensionManager;
-        extensionManager.openExtensionPrefs(extension.uuid, '', {});
-    } catch (e) {
-        if (e.name === 'ImportError')
-            throw new Error('openPrefs() cannot be called from preferences');
-        logError(e, 'Failed to open extension preferences');
-    }
-}
-
-/**
  * versionCheck:
- * @param {string[]} required - an array of versions we're compatible with
- * @param {string} current - the version we have
- * @returns {bool} - true if @current is compatible with @required
+ * @required: an array of versions we're compatible with
+ * @current: the version we have
  *
  * Check if a component is compatible for an extension.
  * @required is an array, and at least one version must match.
@@ -193,11 +160,13 @@ function versionCheck(required, current) {
     let currentArray = current.split('.');
     let major = currentArray[0];
     let minor = currentArray[1];
+    let point = currentArray[2];
     for (let i = 0; i < required.length; i++) {
         let requiredArray = required[i].split('.');
-        if (requiredArray[0] === major &&
-            (requiredArray[1] === undefined && isFinite(minor) ||
-             requiredArray[1] === minor))
+        if (requiredArray[0] == major &&
+            requiredArray[1] == minor &&
+            (requiredArray[2] == point ||
+             (requiredArray[2] == undefined && parseInt(minor) % 2 == 0)))
             return true;
     }
     return false;
